@@ -10,3 +10,10 @@ class UserCreateSchema(UserBaseSchema):
 class UserSchema(UserBaseSchema):
     id: int
     is_superuser: bool
+
+class UserUpdateSchema(BaseModel):
+    email: str | None = None
+    is_superuser: bool | None = None
+
+    class Config:
+        extra = "forbid"

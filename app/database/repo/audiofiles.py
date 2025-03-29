@@ -7,7 +7,7 @@ from app.database.repo.base import BaseRepo
 
 class AudioFileRepo(BaseRepo):
     def __init__(self, session: AsyncSession):
-        super().__init__(session, AudioFile)
+        super().__init__(session, AudioFile)  # noqa
 
     async def create_audio_file(self, name: str, file_path: str,  user_id: int):
         new_file = AudioFile(name=name, file_path=file_path, user_id=user_id)

@@ -46,6 +46,10 @@ async def yandex_callback(code: str, service: UserService = Depends(get_user_ser
         )
         user_info = user_response.json()
 
+    user = await service.repo.users.get_user_by_yandex_id(user_info["id"])
+    if not user:
+        user = await service.create_user(UserCreateSchema(yandex_id=user_info["id"], email=user_info["default_email"]))
+
     user = await service.get_current_user()
     if not user:
         await service.create_user(UserCreateSchema(yandex_id=user_info["id"], email=user_info["default_email"]))

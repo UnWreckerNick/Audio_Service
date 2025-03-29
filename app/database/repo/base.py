@@ -8,7 +8,7 @@ T = TypeVar('T', bound=DeclarativeMeta)
 
 
 class BaseRepo:
-    def __init_(self, session: AsyncSession, model: Type[T]):
+    def __init__(self, session: AsyncSession, model: Type[T]):
         self.session = session
         self.model = model
 

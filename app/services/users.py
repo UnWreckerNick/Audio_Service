@@ -39,13 +39,25 @@ class UserService:
         return user
 
     async def get_user(self, user_id: int):
+        user = await self.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
         return await self.repo.users.get_by_id(user_id)
 
     async def delete_user(self, user_id: int):
+        user = await self.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
         await self.repo.users.delete(user_id)
 
-    async def update_user(self, user_id: int):
-        return await self.repo.users.update(user_id)
+    async def update_user(self, user_id: int, user_data: dict):
+        user = await self.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return await self.repo.users.update(user_id, **user_data)
 
     @staticmethod
     async def get_superuser(current_user: UserSchema = Depends(get_current_user)):

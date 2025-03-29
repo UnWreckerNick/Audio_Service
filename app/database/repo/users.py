@@ -8,7 +8,7 @@ from app.schemas.user import UserCreateSchema
 
 class UserRepo(BaseRepo):
     def __init__(self, session: AsyncSession):
-        super().__init__(session, User)
+        super().__init__(session, User)  # noqa
 
     async def create_user(self, user: UserCreateSchema) -> User:
         new_user = User(**user.model_dump())
