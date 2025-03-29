@@ -7,7 +7,6 @@ from jose import jwt, JWTError
 
 from app.database.database import get_database_repo
 from app.database.requests import RequestsRepo
-from app.models.users import User
 from app.schemas.audiofile import TokenSchema
 from app.schemas.user import UserSchema, UserCreateSchema
 
@@ -42,8 +41,11 @@ class UserService:
     async def get_user(self, user_id: int):
         return await self.repo.users.get_by_id(user_id)
 
-    async def delete_user(self, user: User):
-        await self.repo.users.delete(user.id)
+    async def delete_user(self, user_id: int):
+        await self.repo.users.delete(user_id)
+
+    async def update_user(self, user_id: int):
+        return await self.repo.users.update(user_id)
 
     @staticmethod
     async def get_superuser(current_user: UserSchema = Depends(get_current_user)):
@@ -60,3 +62,9 @@ def get_user_service(
         repo: RequestsRepo = Depends(get_database_repo)
 ) -> UserService:
     return UserService(repo=repo)
+
+async def get_superuser_dependency(user_service: UserService = Depends(get_user_service)):
+    return await user_service.get_superuser()
+
+async def get_current_user_dependency(user_service: UserService = Depends(get_user_service)):
+    return await user_service.get_current_user()

@@ -1,6 +1,6 @@
 from typing import Any, Optional, Type, TypeVar
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeMeta
 
@@ -41,3 +41,30 @@ class BaseRepo:
             return list(result.scalars().all())
         else:
             return result.scalar_one_or_none()
+
+    async def update(self, obj_id: Any | list[Any], **kwargs) -> T | list[T] | None:
+        if not obj_id:
+            return None
+
+        if isinstance(obj_id, list):
+            stmt = (
+                update(self.model)
+                .values(**kwargs)
+                .where(self.model.id.in_(obj_id))
+                .execution_options(synchronize_session="fetch")
+                .returning(self.model)
+            )
+        else:
+            stmt = (
+                update(self.model)
+                .values(**kwargs)
+                .filter_by(id=obj_id)
+                .returning(self.model)
+            )
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+
+        if isinstance(obj_id, list):
+            return list(result.scalars().all())
+
+        return result.scalar_one_or_none()

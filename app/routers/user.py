@@ -1,15 +1,14 @@
 import os
-
 import httpx
 from dotenv import load_dotenv
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.params import Depends
 from starlette.responses import RedirectResponse
 
-from app.schemas.user import UserCreateSchema
-from app.services.users import UserService, get_user_service
-
+from app.schemas.audiofile import TokenSchema
+from app.schemas.user import UserCreateSchema, UserSchema
+from app.services.users import UserService, get_user_service, get_current_user_dependency
 
 load_dotenv()
 
@@ -55,15 +54,10 @@ async def yandex_callback(code: str, service: UserService = Depends(get_user_ser
     return token
 
 
-# Admin endpoint
-@router.delete("/{user_id}")
-async def delete_user(
-        user_id: int,
-        superuser: Depends(UserService.get_superuser),
+@router.post("/token/refresh", response_model=TokenSchema)
+async def refresh_token(
+        user: UserSchema = Depends(get_current_user_dependency),
         service: UserService = Depends(get_user_service)
 ):
-    user = await service.get_user(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    await service.delete_user(user.id)
-    return {"message": "User deleted"}
+    token = await service.get_token({"sub": str(user.id)})
+    return token
