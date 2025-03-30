@@ -14,7 +14,7 @@ from app.schemas.user import UserSchema, UserCreateSchema
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+YANDEX_SECRET_KEY = os.getenv("YANDEX_SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -28,7 +28,7 @@ class UserService:
 
     async def get_current_user(self, token: str):
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(token, YANDEX_SECRET_KEY, algorithms=[ALGORITHM])
             yandex_id: str = payload.get("sub")
             if not yandex_id:
                 raise HTTPException(status_code=401, detail="Invalid token payload")
@@ -54,7 +54,7 @@ class UserService:
         to_encode = sub.copy()
         expire = datetime.now(UTC)+ timedelta(minutes=30)
         to_encode.update({"exp": int(expire.timestamp())})  # noqa
-        token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        token = jwt.encode(to_encode, YANDEX_SECRET_KEY, algorithm=ALGORITHM)
         return TokenSchema(access_token=token, token_type="bearer")
 
 

@@ -14,7 +14,7 @@ from app.routers.superuser import router as superuser_router
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+YANDEX_SECRET_KEY = os.getenv("YANDEX_SECRET_KEY")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
 
 app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY) # noqa
+app.add_middleware(SessionMiddleware, secret_key=YANDEX_SECRET_KEY) # noqa
 
 app.include_router(user_router)
 app.include_router(audio_router)
