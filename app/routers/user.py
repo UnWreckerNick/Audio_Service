@@ -21,22 +21,31 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get("/login/yandex")
-async def login(request: Request):
-    state = secrets.token_urlsafe(16)
+async def login_yandex(request: Request):
+    try:
+        # Генерируем state
+        state = secrets.token_urlsafe(16)
 
-    request.session["oauth_state"] = state
+        # Проверяем сессию
+        if not hasattr(request, 'session'):
+            raise HTTPException(status_code=500, detail="Session middleware not configured")
+        request.session["oauth_state"] = state
 
-    redirect_uri = request.url_for("yandex_callback")
-    auth_url = (
-        f"https://oauth.yandex.ru/authorize"
-        f"?response_type=code"
-        f"&client_id={YANDEX_CLIENT_ID}"
-        f"&redirect_uri={redirect_uri}"
-        f"&state={state}"
-    )
+        # Генерируем redirect_uri
+        redirect_uri = request.url_for("yandex_callback")
 
-    return RedirectResponse(auth_url)
+        # Формируем URL для Яндекса
+        url = (
+            f"https://oauth.yandex.ru/authorize?"
+            f"response_type=code&"
+            f"client_id={YANDEX_CLIENT_ID}&"
+            f"redirect_uri={redirect_uri}&"
+            f"state={state}"
+        )
 
+        return RedirectResponse(url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 @router.get("/auth/yandex/callback")
 async def yandex_callback(
@@ -89,7 +98,7 @@ async def yandex_callback(
         )
 
     # Создаем внутренний токен API
-    token = await service.get_token({"sub": str(user.id)})
+    token = await service.get_token({"sub": str(user.yandex_id)})
 
     # Возвращаем токен (можно перенаправить на фронтенд с токеном в URL)
     return token
@@ -100,5 +109,5 @@ async def refresh_token(
         user: UserSchema = Depends(get_current_user_dependency),
         service: UserService = Depends(get_user_service)
 ):
-    token = await service.get_token({"sub": str(user.id)})
+    token = await service.get_token({"sub": str(user.yandex_id)})
     return token

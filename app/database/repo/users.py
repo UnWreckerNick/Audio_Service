@@ -17,7 +17,7 @@ class UserRepo(BaseRepo):
         await self.session.refresh(new_user)
         return new_user
 
-    async def get_user_by_yandex_id(self, yandex_id: int):
+    async def get_user_by_yandex_id(self, yandex_id: str):
         stmt = select(User).where(User.yandex_id == yandex_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
