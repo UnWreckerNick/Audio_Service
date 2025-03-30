@@ -7,9 +7,9 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.database import database
-from app.routers.user import router as user_router
-from app.routers.audiofile import router as audio_router
-from app.routers.superuser import router as superuser_router
+from app.routes.user import router as user_router
+from app.routes.audiofile import router as audio_router
+from app.routes.superuser import router as superuser_router
 
 
 load_dotenv()
