@@ -78,5 +78,8 @@ def get_user_service(
 async def get_superuser_dependency(user_service: UserService = Depends(get_user_service)):
     return await user_service.get_superuser()
 
-async def get_current_user_dependency(user_service: UserService = Depends(get_user_service)):
-    return await user_service.get_current_user()
+async def get_current_user_dependency(
+    token: str = Depends(oauth2_scheme),
+    user_service: UserService = Depends(get_user_service)
+):
+    return await user_service.get_current_user(token)

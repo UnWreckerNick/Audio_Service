@@ -1,8 +1,10 @@
 import os
+import secrets
+
 import httpx
 from dotenv import load_dotenv
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.params import Depends
 from starlette.responses import RedirectResponse
 
@@ -19,13 +21,36 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get("/login/yandex")
-async def login():
-    return RedirectResponse(f"https://oauth.yandex.ru/authorize?response_type=code&client_id={YANDEX_CLIENT_ID}")
+async def login(request: Request):
+    state = secrets.token_urlsafe(16)
+
+    request.session["oauth_state"] = state
+
+    redirect_uri = request.url_for("yandex_callback")
+    auth_url = (
+        f"https://oauth.yandex.ru/authorize"
+        f"?response_type=code"
+        f"&client_id={YANDEX_CLIENT_ID}"
+        f"&redirect_uri={redirect_uri}"
+        f"&state={state}"
+    )
+
+    return RedirectResponse(auth_url)
 
 
 @router.get("/auth/yandex/callback")
-async def yandex_callback(code: str, service: UserService = Depends(get_user_service)):
-    # Get Yandex token
+async def yandex_callback(
+        request: Request,
+        code: str,
+        state: str,
+        service: UserService = Depends(get_user_service)
+):
+    # Проверяем state для защиты от CSRF
+    if state != request.session.get("oauth_state"):
+        raise HTTPException(status_code=400, detail="Invalid state parameter")
+
+    # Получаем Yandex token
+    redirect_uri = request.url_for("yandex_callback")
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://oauth.yandex.ru/token",
@@ -33,28 +58,40 @@ async def yandex_callback(code: str, service: UserService = Depends(get_user_ser
                 "grant_type": "authorization_code",
                 "code": code,
                 "client_id": YANDEX_CLIENT_ID,
-                "client_secret": YANDEX_CLIENT_SECRET
+                "client_secret": YANDEX_CLIENT_SECRET,
+                "redirect_uri": redirect_uri
             }
         )
         token_data = response.json()
 
-    # Get user info
+    if "error" in token_data:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Yandex OAuth error: {token_data.get('error_description', token_data['error'])}"
+        )
+
+    # Получаем информацию о пользователе
     async with httpx.AsyncClient() as client:
         user_response = await client.get(
             "https://login.yandex.ru/info",
-            headers={"Authorization": f"Bearer {token_data['access_token']}"}
+            headers={"Authorization": f"OAuth {token_data['access_token']}"}
         )
         user_info = user_response.json()
 
+    # Ищем пользователя по yandex_id или создаем нового
     user = await service.repo.users.get_user_by_yandex_id(user_info["id"])
     if not user:
-        user = await service.create_user(UserCreateSchema(yandex_id=user_info["id"], email=user_info["default_email"]))
+        user = await service.create_user(
+            UserCreateSchema(
+                yandex_id=user_info["id"],
+                email=user_info["default_email"]
+            )
+        )
 
-    user = await service.get_current_user()
-    if not user:
-        await service.create_user(UserCreateSchema(yandex_id=user_info["id"], email=user_info["default_email"]))
-
+    # Создаем внутренний токен API
     token = await service.get_token({"sub": str(user.id)})
+
+    # Возвращаем токен (можно перенаправить на фронтенд с токеном в URL)
     return token
 
 
